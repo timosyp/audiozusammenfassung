@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+    <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Sprachnotiz" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="description" content="Sprachnachrichten transkribieren und intelligent zusammenfassen." />
+
+    <title>Sprachnotiz</title>
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="header-inner">
+        <div class="brand">
+          <span class="brand-glyph" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="2" width="6" height="13" rx="3" />
+              <path d="M5 11a7 7 0 0 0 14 0" />
+              <path d="M12 18v3" />
+            </svg>
+          </span>
+          <span class="brand-name">Sprachnotiz</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="hero">
+        <h1>Sprache in Klartext.</h1>
+        <p class="hero-sub">
+          Lade eine WhatsApp- oder Apple-Watch-Sprachnachricht hoch. Du bekommst drei
+          Zusammenfassungen — ausführlich, kompakt und auf den Punkt.
+        </p>
+      </section>
+
+      <section id="upload-section" class="upload">
+        <label for="file-input" id="drop-zone" class="drop-zone" tabindex="0">
+          <span class="drop-zone-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 16V4" />
+              <path d="m6 10 6-6 6 6" />
+              <path d="M4 20h16" />
+            </svg>
+          </span>
+          <span class="drop-zone-title">Sprachnachricht hochladen</span>
+          <span class="drop-zone-sub">Tippen, ablegen oder einfügen</span>
+          <span class="drop-zone-hint">WhatsApp .ogg · Apple Watch .m4a · MP3 · WAV</span>
+        </label>
+        <input id="file-input" type="file" accept="audio/*,.ogg,.opus,.m4a,.mp3,.wav,.aac,.webm" hidden />
+
+        <button type="button" id="paste-btn" class="paste-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="8" y="2" width="8" height="4" rx="1.5"/>
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+            <path d="M12 11v4M10 13h4"/>
+          </svg>
+          Aus Zwischenablage einfügen
+        </button>
+
+        <div id="file-preview" class="file-preview" hidden>
+          <div class="file-preview-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 18V5l12-2v13" />
+              <circle cx="6" cy="18" r="3" />
+              <circle cx="18" cy="16" r="3" />
+            </svg>
+          </div>
+          <div class="file-preview-meta">
+            <div class="file-name" id="file-name">audio.ogg</div>
+            <div class="file-sub" id="file-sub">— · —</div>
+          </div>
+          <audio id="audio-player" controls preload="metadata"></audio>
+          <div class="file-actions">
+            <button type="button" class="btn btn-primary" id="process-btn">
+              <span class="btn-label">Transkribieren &amp; zusammenfassen</span>
+            </button>
+            <button type="button" class="btn btn-ghost" id="reset-btn">Andere Datei</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="progress-section" class="progress" hidden>
+        <div class="progress-card">
+          <div class="progress-spinner" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+          <div class="progress-text">
+            <div class="progress-title" id="progress-title">Wird verarbeitet …</div>
+            <div class="progress-sub" id="progress-sub">Audio wird gelesen</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="results-section" class="results" hidden>
+        <div class="section-label">Zusammenfassungen</div>
+
+        <article class="result-card" data-variant="detailed">
+          <header class="result-head">
+            <div class="result-title">
+              <span class="result-pill">Ausführlich</span>
+            </div>
+            <button type="button" class="icon-btn copy-btn" data-target="summary-detailed" aria-label="Kopieren">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="12" height="12" rx="3" />
+                <path d="M5 15V6a2 2 0 0 1 2-2h9" />
+              </svg>
+            </button>
+          </header>
+          <div class="result-body" id="summary-detailed"></div>
+        </article>
+
+        <article class="result-card" data-variant="compact">
+          <header class="result-head">
+            <div class="result-title">
+              <span class="result-pill">Kompakt</span>
+            </div>
+            <button type="button" class="icon-btn copy-btn" data-target="summary-compact" aria-label="Kopieren">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="12" height="12" rx="3" />
+                <path d="M5 15V6a2 2 0 0 1 2-2h9" />
+              </svg>
+            </button>
+          </header>
+          <div class="result-body" id="summary-compact"></div>
+        </article>
+
+        <article class="result-card" data-variant="bullets">
+          <header class="result-head">
+            <div class="result-title">
+              <span class="result-pill">Auf den Punkt</span>
+            </div>
+            <button type="button" class="icon-btn copy-btn" data-target="summary-bullets" aria-label="Kopieren">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="12" height="12" rx="3" />
+                <path d="M5 15V6a2 2 0 0 1 2-2h9" />
+              </svg>
+            </button>
+          </header>
+          <ul class="result-body bullets" id="summary-bullets"></ul>
+        </article>
+
+        <details class="transcript">
+          <summary>
+            <span class="disclosure-arrow" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m9 18 6-6-6-6" />
+              </svg>
+            </span>
+            <span>Vollständiges Transkript</span>
+            <button type="button" class="icon-btn copy-btn" data-target="transcript-body" aria-label="Transkript kopieren">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="12" height="12" rx="3" />
+                <path d="M5 15V6a2 2 0 0 1 2-2h9" />
+              </svg>
+            </button>
+          </summary>
+          <div class="transcript-body" id="transcript-body"></div>
+        </details>
+
+        <div class="result-actions">
+          <button type="button" class="btn btn-ghost" id="share-btn" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 16V3" /><path d="m8 7 4-4 4 4" />
+              <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+            </svg>
+            Teilen
+          </button>
+          <button type="button" class="btn btn-ghost" id="new-btn">Neue Aufnahme</button>
+        </div>
+      </section>
+
+      <section id="error-section" class="error" hidden>
+        <div class="error-card">
+          <div class="error-title">Etwas ist schiefgelaufen</div>
+          <div class="error-body" id="error-body"></div>
+          <button type="button" class="btn btn-ghost" id="error-retry">Erneut versuchen</button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <span>Verarbeitung über Groq · Whisper Large v3 · Llama 3.3</span>
+    </footer>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>
