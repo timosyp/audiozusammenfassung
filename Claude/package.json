@@ -1,0 +1,9 @@
+{
+  "name": "sprachnotiz",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sprachnachrichten transkribieren und zusammenfassen",
+  "engines": {
+    "node": ">=20"
+  }
+}
