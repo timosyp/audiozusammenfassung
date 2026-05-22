@@ -5,6 +5,8 @@ const els = {
   dropZone: document.getElementById("drop-zone"),
   fileInput: document.getElementById("file-input"),
   pasteBtn: document.getElementById("paste-btn"),
+  pasteTrap: document.getElementById("paste-trap"),
+  uploadOr: document.querySelector(".upload-or"),
   preview: document.getElementById("file-preview"),
   fileName: document.getElementById("file-name"),
   fileSub: document.getElementById("file-sub"),
@@ -101,6 +103,7 @@ function setFile(file) {
   els.preview.hidden = false;
   els.dropZone.style.display = "none";
   els.pasteBtn.hidden = true;
+  els.uploadOr.hidden = true;
   els.processBtn.disabled = false;
   els.processBtn.focus({ preventScroll: true });
 }
@@ -116,6 +119,7 @@ function resetAll() {
   els.preview.hidden = true;
   els.dropZone.style.display = "";
   els.pasteBtn.hidden = false;
+  els.uploadOr.hidden = false;
   setSection("upload");
 }
 
@@ -163,64 +167,91 @@ els.dropZone.addEventListener("keydown", (e) => {
 
 // ---------- Paste ----------
 
-// Tastatur: Ctrl+V / Cmd+V
-document.addEventListener("paste", (e) => {
-  const item = [...(e.clipboardData?.items || [])].find((i) =>
-    i.type.startsWith("audio/")
+// Hilfsfunktion: Audio aus ClipboardEvent extrahieren
+function audioFileFromClipboard(clipboardData) {
+  if (!clipboardData?.items) return null;
+  const items = [...clipboardData.items];
+
+  // 1. Direkte Audio-MIME-Types
+  const audioItem = items.find((i) => i.type.startsWith("audio/") && i.kind === "file");
+  if (audioItem) return audioItem.getAsFile();
+
+  // 2. Generische Binärdaten (manche Browser/OS liefern audio so)
+  const binaryItem = items.find(
+    (i) => i.type === "application/octet-stream" && i.kind === "file"
   );
-  if (item) {
-    const file = item.getAsFile();
-    if (file) setFile(file);
+  if (binaryItem) return binaryItem.getAsFile();
+
+  return null;
+}
+
+// Globaler paste-Event: greift Ctrl+V / Cmd+V und iOS-Systemeinsetzen ab
+document.addEventListener("paste", (e) => {
+  const file = audioFileFromClipboard(e.clipboardData);
+  if (file) {
+    e.preventDefault();
+    setFile(file);
   }
 });
 
-// Button: tippen → clipboard.read() API
+// Paste-Trap: fängt Paste-Event ab, der über das versteckte Input kommt (iOS-Trick)
+els.pasteTrap.addEventListener("paste", (e) => {
+  const file = audioFileFromClipboard(e.clipboardData);
+  if (file) {
+    e.preventDefault();
+    setFile(file);
+  } else {
+    showToast("Keine Audiodatei in der Zwischenablage");
+  }
+  els.pasteTrap.blur();
+});
+
+// Button-Klick:
+// 1. Versuche programmatischen Clipboard-Zugriff (Chrome Desktop)
+// 2. Fallback: fokussiere den Trap → iOS zeigt „Einsetzen"-Menü
 els.pasteBtn.addEventListener("click", async () => {
-  // Fallback: wenn Clipboard API nicht verfügbar ist (ältere Browser)
-  if (!navigator.clipboard?.read) {
-    showToast("Bitte Ctrl+V / Cmd+V verwenden oder Datei direkt hochladen");
-    return;
-  }
-
   els.pasteBtn.classList.add("loading");
-  try {
-    const items = await navigator.clipboard.read();
-    let found = false;
 
-    for (const clipItem of items) {
-      // Audio direkt
-      const audioType = clipItem.types.find((t) => t.startsWith("audio/"));
-      if (audioType) {
-        const blob = await clipItem.getType(audioType);
-        const ext = audioType.split("/")[1]?.split(";")[0] || "audio";
-        const file = new File([blob], `zwischenablage.${ext}`, { type: audioType });
-        setFile(file);
-        found = true;
-        break;
+  // Strategie A: navigator.clipboard.read() — funktioniert in Chrome, Edge
+  if (navigator.clipboard?.read) {
+    try {
+      const items = await navigator.clipboard.read();
+      let found = false;
+      for (const clipItem of items) {
+        const audioType = clipItem.types.find((t) => t.startsWith("audio/"));
+        if (audioType) {
+          const blob = await clipItem.getType(audioType);
+          const ext = audioType.split("/")[1]?.split(";")[0] || "ogg";
+          setFile(new File([blob], `paste.${ext}`, { type: audioType }));
+          found = true;
+          break;
+        }
+        if (clipItem.types.includes("application/octet-stream")) {
+          const blob = await clipItem.getType("application/octet-stream");
+          setFile(new File([blob], "paste.audio", { type: "audio/ogg" }));
+          found = true;
+          break;
+        }
       }
-
-      // Manchmal wird Audio als application/octet-stream geliefert
-      if (clipItem.types.includes("application/octet-stream")) {
-        const blob = await clipItem.getType("application/octet-stream");
-        const file = new File([blob], "zwischenablage.audio", { type: "audio/ogg" });
-        setFile(file);
-        found = true;
-        break;
-      }
+      els.pasteBtn.classList.remove("loading");
+      if (found) return;
+      // Nichts gefunden → Strategie B versuchen
+    } catch (err) {
+      // NotAllowedError oder Nicht-unterstützt → Strategie B
     }
-
-    if (!found) {
-      showToast("Keine Audiodatei in der Zwischenablage gefunden");
-    }
-  } catch (err) {
-    if (err?.name === "NotAllowedError") {
-      showToast("Zwischenablage-Zugriff verweigert — bitte kurz auf die Seite tippen");
-    } else {
-      showToast("Kein Audio in der Zwischenablage — Datei direkt hochladen");
-    }
-  } finally {
-    els.pasteBtn.classList.remove("loading");
   }
+
+  // Strategie B: Trap-Input fokussieren → iOS/Safari zeigt natives „Einsetzen"-Popup
+  els.pasteBtn.classList.remove("loading");
+  showToast('Jetzt „Einsetzen" antippen');
+  // kurze Verzögerung, damit der Toast sichtbar ist, bevor focus die Tastatur auslöst
+  setTimeout(() => {
+    els.pasteTrap.focus();
+    // Auf Desktop: programmatisch paste dispatchen
+    try {
+      document.execCommand("paste");
+    } catch {}
+  }, 120);
 });
 
 // ---------- Reset / Other File ----------
