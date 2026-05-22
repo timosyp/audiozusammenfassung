@@ -185,7 +185,55 @@ button {
 .upload {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 12px;
+}
+
+.paste-btn {
+  -webkit-appearance: none;
+  appearance: none;
+  border: none;
+  width: 100%;
+  padding: 13px 18px;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: var(--font-system);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background var(--duration) var(--ease),
+    color var(--duration) var(--ease),
+    border-color var(--duration) var(--ease),
+    transform 0.12s var(--ease);
+  -webkit-tap-highlight-color: transparent;
+  min-height: 44px;
+}
+
+.paste-btn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.paste-btn:hover {
+  background: color-mix(in srgb, var(--bg-elevated) 85%, var(--accent) 5%);
+  border-color: color-mix(in srgb, var(--border) 60%, var(--accent) 30%);
+  color: var(--accent);
+}
+
+.paste-btn:active {
+  transform: scale(0.98);
+}
+
+.paste-btn.loading {
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 .drop-zone {
