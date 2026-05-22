@@ -58,6 +58,13 @@
         </label>
         <input id="file-input" type="file" accept="audio/*,.ogg,.opus,.m4a,.mp3,.wav,.aac,.webm" hidden />
 
+        <!-- Verstecktes Input — zieht auf iOS das native „Einsetzen"-Menü an -->
+        <input id="paste-trap" type="text" autocomplete="off"
+               aria-hidden="true" tabindex="-1"
+               style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;top:0;left:0" />
+
+        <div class="upload-or" aria-hidden="true"><span>oder</span></div>
+
         <button type="button" id="paste-btn" class="paste-btn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <rect x="8" y="2" width="8" height="4" rx="1.5"/>
