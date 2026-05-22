@@ -4,6 +4,7 @@
 const els = {
   dropZone: document.getElementById("drop-zone"),
   fileInput: document.getElementById("file-input"),
+  pasteBtn: document.getElementById("paste-btn"),
   preview: document.getElementById("file-preview"),
   fileName: document.getElementById("file-name"),
   fileSub: document.getElementById("file-sub"),
@@ -99,6 +100,7 @@ function setFile(file) {
 
   els.preview.hidden = false;
   els.dropZone.style.display = "none";
+  els.pasteBtn.hidden = true;
   els.processBtn.disabled = false;
   els.processBtn.focus({ preventScroll: true });
 }
@@ -113,6 +115,7 @@ function resetAll() {
   els.audioPlayer.load();
   els.preview.hidden = true;
   els.dropZone.style.display = "";
+  els.pasteBtn.hidden = false;
   setSection("upload");
 }
 
@@ -160,6 +163,7 @@ els.dropZone.addEventListener("keydown", (e) => {
 
 // ---------- Paste ----------
 
+// Tastatur: Ctrl+V / Cmd+V
 document.addEventListener("paste", (e) => {
   const item = [...(e.clipboardData?.items || [])].find((i) =>
     i.type.startsWith("audio/")
@@ -167,6 +171,55 @@ document.addEventListener("paste", (e) => {
   if (item) {
     const file = item.getAsFile();
     if (file) setFile(file);
+  }
+});
+
+// Button: tippen → clipboard.read() API
+els.pasteBtn.addEventListener("click", async () => {
+  // Fallback: wenn Clipboard API nicht verfügbar ist (ältere Browser)
+  if (!navigator.clipboard?.read) {
+    showToast("Bitte Ctrl+V / Cmd+V verwenden oder Datei direkt hochladen");
+    return;
+  }
+
+  els.pasteBtn.classList.add("loading");
+  try {
+    const items = await navigator.clipboard.read();
+    let found = false;
+
+    for (const clipItem of items) {
+      // Audio direkt
+      const audioType = clipItem.types.find((t) => t.startsWith("audio/"));
+      if (audioType) {
+        const blob = await clipItem.getType(audioType);
+        const ext = audioType.split("/")[1]?.split(";")[0] || "audio";
+        const file = new File([blob], `zwischenablage.${ext}`, { type: audioType });
+        setFile(file);
+        found = true;
+        break;
+      }
+
+      // Manchmal wird Audio als application/octet-stream geliefert
+      if (clipItem.types.includes("application/octet-stream")) {
+        const blob = await clipItem.getType("application/octet-stream");
+        const file = new File([blob], "zwischenablage.audio", { type: "audio/ogg" });
+        setFile(file);
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      showToast("Keine Audiodatei in der Zwischenablage gefunden");
+    }
+  } catch (err) {
+    if (err?.name === "NotAllowedError") {
+      showToast("Zwischenablage-Zugriff verweigert — bitte kurz auf die Seite tippen");
+    } else {
+      showToast("Kein Audio in der Zwischenablage — Datei direkt hochladen");
+    }
+  } finally {
+    els.pasteBtn.classList.remove("loading");
   }
 });
 
